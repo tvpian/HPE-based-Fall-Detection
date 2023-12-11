@@ -106,17 +106,6 @@ class Trainer:
 
             if epoch_val_loss < best_val_loss and save_model:
                 best_val_loss = epoch_val_loss
-                if not os.path.exists(output_path):
-                    os.makedirs(output_path)
-
-                file_name = (
-                    output_path
-                    + time.strftime("%Y%m%d-%H%M%S")
-                    + "_"
-                    + self.model.__class__.__name__
-                    + "_best_model.pt"
-                )
-                torch.save(self.model.state_dict(), file_name)
                 self.best_model = self.model
 
             self.writer.add_scalar(
@@ -239,6 +228,15 @@ class Trainer:
             os.makedirs(output_path)
 
         torch.cuda.empty_cache()
+        file_name = (
+            time.strftime("%Y%m%d-%H%M%S")
+            + "_"
+            + self.model.__class__.__name__
+            + "_"
+            + "best_model"
+            + ".pt"
+        )
+        torch.save(self.best_model.state_dict(), os.path.join(output_path, file_name))
         self.best_model.to(self.device)
         self.best_model.eval()
         with torch.no_grad():
@@ -262,8 +260,8 @@ class Trainer:
             self.logger.info(f"F1 Score: {f1_score}")
 
             plt.figure(figsize=(8, 6))
-            colors = cycle(["aqua", "darkorange", "cornflowerblue"])
-            for i, color in zip(range(3), colors):
+            colors = cycle(["aqua", "darkorange"])
+            for i, color in zip(range(self.model.num_classes), colors):
                 fpr, tpr, _ = roc_curve(labels, predictions, pos_label=i)
                 roc_auc = auc(fpr, tpr)
                 plt.plot(
@@ -321,6 +319,9 @@ class Trainer:
         -------
         None
         """
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+            
         plt.plot(self.train_loss)
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
@@ -332,13 +333,12 @@ class Trainer:
         plt.title("Validation Loss")
         plt.legend(["Training Loss", "Validation Loss"])
         file_name = (
-            output_path
-            + time.strftime("%Y%m%d-%H%M%S")
+            time.strftime("%Y%m%d-%H%M%S")
             + "_"
             + self.model.__class__.__name__
             + "_"
             + "loss"
             + ".png"
         )
-        plt.savefig(file_name)
+        plt.savefig(os.path.join(output_path, file_name))
         plt.show()

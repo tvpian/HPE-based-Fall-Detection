@@ -31,11 +31,6 @@ def parse_args():
         help="Path to the output folder",
     )
     parser.add_argument(
-        "--single_view",
-        action="store_true",
-        help="Use single view",
-    )
-    parser.add_argument(
         "--logger_config",
         type=str,
         default="./config/logger.ini",
