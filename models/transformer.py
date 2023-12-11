@@ -89,7 +89,7 @@ class Transformer(nn.Module):
         )
         self.decoder = nn.Linear(self.d_model, self.num_classes)
 
-    def forward(self, x: List) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -101,13 +101,15 @@ class Transformer(nn.Module):
         torch.Tensor
             Output of the transformer-based binary classifier of shape (batch_size, num_classes)
         """
-        # x = pad_sequence(x, batch_first=True, padding_value=-1)
-        # mask = x != -1
-        # mask = mask[:, :, 0].transpose(0, 1)
-        
-        x = self.encoder(x.float().to("cuda")) * math.sqrt(self.d_model)
+        x = x.permute(1, 0, 2)
+        x = self.encoder(x) * math.sqrt(self.d_model)
+
         x += self.pos_encoding[:, : x.size(1), :].type_as(x)
         x = self.dropout(x)
-        x = self.transformer_encoder(x) #, src_key_padding_mask=~mask.to("cuda"))
+
+        x = self.transformer_encoder(x, src_key_padding_mask=mask)
+        x = x.permute(1, 0, 2)
+
         x = self.decoder(x[:, -1, :])
+
         return x

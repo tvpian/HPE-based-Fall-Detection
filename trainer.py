@@ -159,8 +159,8 @@ class Trainer:
         epoch_correct = 0
         epoch_count = 0
         for idx, batch in enumerate(iter(train_loader)):
-            predictions = self.model(batch[0])
-            labels = batch[1].to(self.device)
+            predictions = self.model(batch[0].float().to(self.device), batch[1].to(self.device))
+            labels = batch[2].to(self.device)
 
             loss = self.criterion(predictions, labels)
             self.writer.add_scalar("Training loss per batch", loss, idx)
@@ -202,8 +202,8 @@ class Trainer:
             val_epoch_count = 0
 
             for idx, batch in enumerate(iter(val_loader)):
-                predictions = self.model(batch[0])
-                labels = batch[1].to(self.device)
+                predictions = self.model(batch[0].float().to(self.device), batch[1].to(self.device))
+                labels = batch[2].to(self.device)
 
                 val_loss = self.criterion(predictions, labels)
                 self.writer.add_scalar("Validation loss per batch", val_loss, idx)
@@ -245,8 +245,8 @@ class Trainer:
             predictions = []
             labels = []
             for idx, batch in enumerate(iter(test_loader)):
-                predictions.extend(self.best_model(batch[0]).argmax(axis=1).tolist())
-                labels.extend(batch[1].tolist())
+                predictions.extend(self.best_model(batch[0].float().to(self.device), batch[1].to(self.device)).argmax(axis=1).tolist())
+                labels.extend(batch[2].tolist())
 
             self.logger.info(f"Predictions: {predictions}")
             self.logger.info(f"Labels: {labels}")
