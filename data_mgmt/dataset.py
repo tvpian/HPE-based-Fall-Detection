@@ -3,6 +3,8 @@ from torch.utils.data import Dataset
 import numpy as np
 import os
 
+# from dataloader import DataLoader
+
 from typing import Tuple
 
 def get_label(file_name: str) -> int:
@@ -98,3 +100,19 @@ class KeypointsDataset(Dataset):
         poses = self.poses[index]
         label = self.labels[index]
         return poses, label
+    
+# if __name__ == "__main__":
+#     dataset = KeypointsDataset("../data", skip=3)
+    
+#     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [int(0.8 * len(dataset)), len(dataset) - int(0.8 * len(dataset))])
+
+#     train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+#     test_loader = DataLoader(test_dataset, batch_size=2, shuffle=True)
+
+#     for batch in train_loader:
+#         print(batch[0].shape)
+#         print(batch[0])
+#         print(batch[1].shape)
+#         print(batch[1])
+#         print(batch[2].shape)
+#         break

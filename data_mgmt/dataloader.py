@@ -68,8 +68,9 @@ class Collater:
         masks = [torch.ones(item.shape[0]) for item in poses]
         for i, item in enumerate(masks):
             masks[i] = torch.nn.functional.pad(item, (0, max_length - item.shape[0]))
-            poses[i] = torch.nn.functional.pad(poses[i], (0, 0, 0, max_length - item.shape[0]))
-            
+
+        poses = [torch.nn.functional.pad(item, (0, 0, 0, max_length - item.shape[0])) for item in poses]
+                    
         poses = torch.stack(poses)
         masks = torch.stack(masks)
         labels = torch.tensor(labels, dtype=torch.long)
