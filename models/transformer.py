@@ -51,6 +51,7 @@ class Transformer(nn.Module):
         dropout: float = 0.1,
         dim_ff: int = 2048,
         num_classes: int = 2,
+        dataset: str = "ntu",
     ) -> None:
         """
         Parameters
@@ -74,6 +75,7 @@ class Transformer(nn.Module):
         self.num_layers = num_layers
         self.num_features = num_features
         self.num_classes = num_classes
+        self.dataset = dataset
 
         self.pos_encoding = get_positional_encoding(
             1000, d_model
@@ -89,7 +91,7 @@ class Transformer(nn.Module):
         )
         self.decoder = nn.Linear(self.d_model, self.num_classes)
 
-    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
         Parameters
         ----------

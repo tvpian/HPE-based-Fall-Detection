@@ -22,6 +22,7 @@ class Trainer:
         model: nn.Module,
         lr: float = 5e-5,
         logger: Logger = None,
+        model_type: str = "transformer",
     ) -> None:
         """
         Parameters
@@ -37,6 +38,8 @@ class Trainer:
         self.logger = logger
         self.model = model
         self.lr = lr
+        self.model_type = model_type
+
         self.writer = SummaryWriter()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -148,8 +151,12 @@ class Trainer:
         epoch_correct = 0
         epoch_count = 0
         for idx, batch in enumerate(iter(train_loader)):
-            predictions = self.model(batch[0].float().to(self.device), batch[1].to(self.device))
-            labels = batch[2].to(self.device)
+            if self.model_type == "transformer":
+                predictions = self.model(batch[0].float().to(self.device), batch[1].to(self.device))
+                labels = batch[2].to(self.device)
+            elif self.model_type == "gcn_transformer":
+                predictions = self.model(batch[0])
+                labels = batch[1].to(self.device)
 
             loss = self.criterion(predictions, labels)
             self.writer.add_scalar("Training loss per batch", loss, idx)
@@ -191,8 +198,12 @@ class Trainer:
             val_epoch_count = 0
 
             for idx, batch in enumerate(iter(val_loader)):
-                predictions = self.model(batch[0].float().to(self.device), batch[1].to(self.device))
-                labels = batch[2].to(self.device)
+                if self.model_type == "transformer":
+                    predictions = self.model(batch[0].float().to(self.device), batch[1].to(self.device))
+                    labels = batch[2].to(self.device)
+                elif self.model_type == "gcn_transformer":
+                    predictions = self.model(batch[0])
+                    labels = batch[1].to(self.device)
 
                 val_loss = self.criterion(predictions, labels)
                 self.writer.add_scalar("Validation loss per batch", val_loss, idx)
@@ -224,6 +235,7 @@ class Trainer:
             Tuple containing the test epoch loss, test epoch correct
             and test epoch count
         """
+        output_path = os.path.join(output_path, self.model.dataset)
         if not os.path.exists(output_path):
             os.makedirs(output_path)
 
@@ -237,14 +249,19 @@ class Trainer:
             + ".pt"
         )
         torch.save(self.best_model.state_dict(), os.path.join(output_path, file_name))
+        
         self.best_model.to(self.device)
         self.best_model.eval()
         with torch.no_grad():
             predictions = []
             labels = []
             for idx, batch in enumerate(iter(test_loader)):
-                predictions.extend(self.best_model(batch[0].float().to(self.device), batch[1].to(self.device)).argmax(axis=1).tolist())
-                labels.extend(batch[2].tolist())
+                if self.model_type == "transformer":
+                    predictions.extend(self.best_model(batch[0].float().to(self.device), batch[1].to(self.device)).argmax(axis=1).tolist())
+                    labels.extend(batch[2].tolist())
+                elif self.model_type == "gcn_transformer":
+                    predictions.extend(self.best_model(batch[0]).argmax(axis=1).tolist())
+                    labels.extend(batch[1].tolist())
 
             self.logger.info(f"Predictions: {predictions}")
             self.logger.info(f"Labels: {labels}")
@@ -253,11 +270,17 @@ class Trainer:
             precision, recall, f1_score, _ = precision_recall_fscore_support(
                 labels, predictions, average="weighted"
             )
+            cm = confusion_matrix(labels, predictions)
+            tn, fp, fn, tp = cm.ravel()
+            sensitivity = tp / (tp + fn)
+            specificity = tn / (tn + fp)
+            geometric_mean = (sensitivity * specificity) ** 0.5
 
             self.logger.info(f"Accuracy: {accuracy:.4f}")
-            self.logger.info(f"Precision: {precision}")
-            self.logger.info(f"Recall: {recall}")
-            self.logger.info(f"F1 Score: {f1_score}")
+            self.logger.info(f"Precision: {precision:.4f}")
+            self.logger.info(f"Recall: {recall:.4f}")
+            self.logger.info(f"F1 Score: {f1_score:.4f}")
+            self.logger.info(f"G-Mean: {geometric_mean:.4f}")
 
             plt.figure(figsize=(8, 6))
             colors = cycle(["aqua", "darkorange"])
@@ -288,7 +311,6 @@ class Trainer:
             plt.savefig(os.path.join(output_path, file_name))
             plt.show()
 
-            cm = confusion_matrix(labels, predictions)
             ax = sns.heatmap(
                 cm,
                 annot=True,
@@ -319,6 +341,7 @@ class Trainer:
         -------
         None
         """
+        output_path = os.path.join(output_path, self.model.dataset)
         if not os.path.exists(output_path):
             os.makedirs(output_path)
             

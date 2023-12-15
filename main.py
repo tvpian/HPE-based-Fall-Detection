@@ -4,12 +4,15 @@ import argparse
 from collections import Counter
 
 from trainer import Trainer
-from model import get_model
+from model import get_transformer_model, get_gcn_transformer_model
 from utils.logger import Logger
 from utils.model_config import ModelConfig
-from data_mgmt.dataset import KeypointsDataset
+from data_mgmt.datasets.ur_dataset import URDataset
+from data_mgmt.datasets.ntu_dataset import NTUDataset
 
-def parse_args():
+from typing import Tuple
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train the model")
 
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
@@ -18,6 +21,24 @@ def parse_args():
         type=str,
         default="./data",
         help="Path to the dataset folder",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="transformer",
+        help="Model to use for training, transformer or gcn_transformer",
+    )
+    parser.add_argument(
+        "--dataset_type",
+        type=str,
+        default="ur",
+        help="Type of dataset to use, ntu or ur",    
+    )
+    parser.add_argument(
+        "--skip",
+        type=int,
+        default=11,
+        help="Number of frames to skip",
     )
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
@@ -42,14 +63,34 @@ def parse_args():
         default="./config/model.json",
         help="Path to the model config file",
     )
+    parser.add_argument(
+        "--occlude",
+        action="store_true",
+        help="Whether to occlude the input or not",
+    )
     args = parser.parse_args()
+
+    if args.dataset_type not in ["ntu", "ur"]:
+        raise ValueError("Dataset type should be either ntu or ur")
+    
+    if args.model not in ["transformer", "gcn_transformer"]:
+        raise ValueError("Model should be either transformer or gcn_transformer")
+    
+    if args.dataset_type == "ur":
+        if args.skip % 2 == 0:
+            raise ValueError("Skip frames should be odd")
+        if args.skip > 11:
+            raise ValueError("Skip frames should be less than 11")
 
     return args
 
 
-def load_dataset(dataset_folder, logger):
+def load_dataset(args : argparse.Namespace, logger : Logger) -> Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset, torch.utils.data.Dataset]:
     np.random.seed(42)
-    dataset = KeypointsDataset(dataset_folder, skip=3)
+    if args.dataset_type == "ntu":
+        dataset = NTUDataset(args.dataset, occlude=args.occlude)
+    elif args.dataset_type == "ur":
+        dataset = URDataset(args.dataset, skip=args.skip)
 
     if len(dataset) > 0:
         logger.info("Dataset loaded successfully.")
@@ -88,7 +129,7 @@ def main():
     logger.info("\n")
     logger.info("Loading the dataset...")
     train_dataset, val_dataset, test_dataset = load_dataset(
-        args.dataset, logger
+        args, logger
     )
 
     logger.info(f"Training dataset size: {len(train_dataset)}")
@@ -96,11 +137,16 @@ def main():
     logger.info(f"Testing dataset size: {len(test_dataset)}")
 
     model_config = ModelConfig(args.model_config).get_config()
-    model, (train_dataloader, val_dataloader, test_dataloader) = get_model(
-        model_config, args, (train_dataset, val_dataset, test_dataset)
-    )
-
-    trainer = Trainer(model, lr=args.lr, logger=logger)
+    if args.model == "transformer":
+        model, (train_dataloader, val_dataloader, test_dataloader) = get_transformer_model(
+            model_config, args, (train_dataset, val_dataset, test_dataset)
+        )
+    elif args.model == "gcn_transformer":
+        model, (train_dataloader, val_dataloader, test_dataloader) = get_gcn_transformer_model(
+            model_config, args, (train_dataset, val_dataset, test_dataset)
+        )
+    
+    trainer = Trainer(model, lr=args.lr, logger=logger, model_type=args.model)
     logger.info(f"Batch size: {args.batch_size}")
     logger.info(f"Number of epochs: {args.epochs}")
     logger.info(f"Learning rate: {args.lr}")

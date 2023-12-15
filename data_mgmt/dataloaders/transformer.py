@@ -61,14 +61,14 @@ class Collater:
         Any
             Collated batch of data
         """
-        poses = [item[0] for item in batch]
-        labels = [item[1] for item in batch]
-
+        poses = [item["keypoints"] for item in batch]
+        labels = [item["label"] for item in batch]
+        
         max_length = max([item.shape[0] for item in poses])
         masks = [torch.ones(item.shape[0]) for item in poses]
+
         for i, item in enumerate(masks):
             masks[i] = torch.nn.functional.pad(item, (0, max_length - item.shape[0]))
-
         poses = [torch.nn.functional.pad(item, (0, 0, 0, max_length - item.shape[0])) for item in poses]
                     
         poses = torch.stack(poses)
@@ -76,7 +76,6 @@ class Collater:
         labels = torch.tensor(labels, dtype=torch.long)
 
         return poses, masks, labels
-
 
 class DataLoader(torch.utils.data.DataLoader):
     """
