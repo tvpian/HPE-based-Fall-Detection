@@ -1,6 +1,11 @@
 # Fall Detection 
 Striking the Balance: Human Pose Estimation based Optimal Fall Recognition
 
+# Contributors
+- [Abhijay Singh](abhijay@umd.edu)
+- [Tharun V. Puthanveettil](tvpian@umd.edu)
+
+
 # Dependencies
 The dependencies are listed in requirements.txt. You can install them with the following command:
 ```bash
