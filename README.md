@@ -1,5 +1,6 @@
 # Fall Detection 
 Striking the Balance: Human Pose Estimation based Optimal Fall Recognition
+For more details, please refer to the paper pre-print: [Striking the Balance: Human Pose Estimation based Optimal Fall Recognition](./preprint.pdf).
 
 # Contributors
 - [Abhijay Singh](abhijay@umd.edu)
